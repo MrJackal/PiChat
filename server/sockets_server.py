@@ -1,12 +1,11 @@
 import json
 import socket
 import threading
-import requests
 
 from clients import ChatClient
 
 TCP_IP = '127.0.0.1'
-TCP_PORT = 12346
+TCP_PORT = 12347
 BUFFER_SIZE = 1024
 
 
@@ -15,16 +14,6 @@ BUFFER_SIZE = 1024
 # <[L]> used to replace with a list of strings/ints/doubles etc
 
 _clientList = []
-
-_validcommands = {
-    "help": {},
-    "list": {},
-    "quit": {},
-    "msg": {},
-    "ban": {},
-    "kick": {},
-    "mute": {}
-}
 
 _requestcommands = {
     "get_userlist"  # Returns list of users
@@ -41,13 +30,17 @@ def client(conn):
         for chatClient in _clientList:
             _userdata = json.loads(data)
             username = _userdata["data"]["username"]
+
             if _userdata["cmd"] == "user_connect":
                 msg = {"cmd": "recv_connection", "data": {"username": username}}
                 chatClient.conn.send(json.dumps(msg))
-                print "[INFO] %s Connected" % (_userdata["data"]["username"])
+                print "[INFO] %s Connected" % (username)
+
             if _userdata["cmd"] == "send_message":
-                chatClient.conn.send(data)
-                print "[INFO] %s: %s" % (_userdata["data"]["username"], _userdata["data"]["message"])
+                message = _userdata["data"]["message"]
+                if not message.startswith("!"):
+                    chatClient.conn.send(data)
+                    print "[INFO] %s: %s" % (username, message)
 
     for index, chatClient in enumerate(_clientList):
         if chatClient.conn.fileno() == conn.fileno:

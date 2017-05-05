@@ -5,9 +5,9 @@ import threading
 import json
 import requests
 
-TCP_IP = '127.0.0.1'
-apiURL = "/api"
-TCP_PORT = 12346
+SERVER_HOST = '127.0.0.1'
+SERVER_API_URL = "http://" + SERVER_HOST + "/api"
+SERVER_PORT = 12347
 BUFFER_SIZE = 1024
 running = True
 
@@ -15,63 +15,18 @@ s = ""
 Username = ""
 _cmdprefix = "!"
 
-_helpcommands = {
-    "help": {
-        "desc": "A list of all commands.",
-        "cli_cmd": "get_help"
-    }
-}
-
-_commands = {
-    "list": {
-        "name": "list",
-        "desc": "Will return all online users.",
-        "usage": "!list",
-        "srv_cmd": "get_userlist"
-    },
-    "quit": {
-        "name": "quit",
-        "desc": "This will disconnect your from the server.",
-        "usage": "!quit",
-        "srv_cmd": "user_disconnect"
-    },
-    "msg": {
-        "name": "msg",
-        "desc": "Send a private message to the specified person",
-        "usage": "!msg [user]",
-        "srv_cmd": "send_privatemessage"
-    },
-    "ban": {
-        "name": "ban",
-        "desc": "Ban the specified person from the server or Ban them for a certain time e.g. 1m, 3h, 4d, 5w, 6M, 7Y.",
-        "usage": "!ban [user] {time}",
-        "srv_cmd": "user_ban"
-    },
-    "kick": {
-        "name": "kick",
-        "desc": "Kick the specified person from the server.",
-        "usage": "!kick [user]",
-        "srv_cmd": "user_kick"
-    },
-    "mute": {
-        "name": "mute",
-        "desc": "Mute the specified person or Mute then for a certain time e.g. 1m, 3h, 4d, 5w, 6M, 7Y.",
-        "usage": "!mute [user] {time}",
-        "srv_cmd": "user_mute"
-    }
-}
+_helpcommands = {}
+_commands = {}
 
 
 def gethelpcommandlist():
-    r = requests.get(TCP_IP+apiURL+"/commands/help")
-    if r.status_code == 200:
-        _commands = r.json()
+    r = requests.get(SERVER_API_URL+"/commands/help")
+    return json.loads(r.text)
 
 
 def getcommandlist():
-    r = requests.get(TCP_IP+apiURL+"/commands/all")
-    if r.status_code == 200:
-        _commands = r.json()
+    r = requests.get(SERVER_API_URL+"/commands/all")
+    return json.loads(r.text)
 
 
 def client(conn):
@@ -90,9 +45,9 @@ def client(conn):
 
 def get_help():
     print "----- Displaying Results for Help -----\n"
-    for command in _commands.values():
+    for command in _commands:
         printed = 0
-        for command_details in command.keys():
+        for command_details in command:
             if printed == 0:
                 print command["name"] + ":- " + command["desc"] + " Usage: " + command["usage"] + "\n"
                 printed = 1
@@ -122,12 +77,16 @@ while running:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("Connecting...")
-        s.connect((TCP_IP, TCP_PORT))
+        s.connect((SERVER_HOST, SERVER_PORT))
 
         Username = (raw_input("Username: "))
-        print(Username + " has joined")
 
         send_userconnect(s, Username)
+
+        print("Grabbing All the Required Information...")
+        _helpcommands = gethelpcommandlist()
+        _commands = getcommandlist()
+        print("Done...")
 
         # Store thread for receiving from server
         threading.Thread(target=client, args=(s,)).start()
